@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Docker Compose for NV-Ingest MCP RAG Example
+#
+# This creates a container with NAT + NV-Ingest client installed.
+# It connects to your existing NV-Ingest services on the host network.
+#
+# Usage:
+#   # Build and start the container (runs in background)
+#   docker compose up -d --build
+#
+#   # Exec into the running container
+#   docker compose exec nat bash
+#
+#   # Run NAT commands inside the container
+#   nat run --config_file /app/nvingest_mcp/configs/nvingest_agent_direct.yml --input "Your query"
+#
+#   # Stop the container
+#   docker compose down
+
+services:
+  nat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nat-mcp-rag
+    
+    # Use host network to access NV-Ingest services on localhost
+    network_mode: host
+    
+    # Keep container running indefinitely (so you can exec into it)
+    command: tail -f /dev/null
+    
+    # Restart policy - keep running unless stopped
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      # NV-Ingest connection settings (adjust if needed)
+      - NVINGEST_HOST=localhost
+      - MILVUS_URI=http://localhost:19530
+      - EMBEDDING_ENDPOINT=http://localhost:8012/v1
+    
+    # Mount volumes for data access
+    volumes:
+      # Mount the configs directory for easy access
+      - ./configs:/app/nvingest_mcp/configs:ro
+      # Mount a data directory for documents to ingest
+      - ./data:/app/data
+      # Mount parent directory for access to test PDFs
+      - ../../:/app/nv-ingest-lib-mode:ro
+    
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+    
+    # Default working directory
+    working_dir: /app/nat-mcp
+
